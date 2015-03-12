@@ -111,7 +111,7 @@ function sendToElastichSearch() {
             type: 'recipe',
             body: {
                 content: text,
-                id: checksum
+                checksum: checksum
 
             }
         }, function(error, response) {
@@ -123,7 +123,7 @@ function sendToElastichSearch() {
             type: 'picture',
             body: {
                 content: buf.toString('base64'),
-                id: checksum
+                checksum: checksum
 
             }
         }, function(error, response) {
@@ -179,6 +179,23 @@ gulp.task('elastic', [], function() {
 
 });
 
+gulp.task('drop', function() {
+    var elasticsearch = require('elasticsearch');
+    var client = new elasticsearch.Client({
+        host: 'localhost:9200',
+        log: 'trace'
+    });
+
+     client.indices.delete({
+        index: 'recipes'
+    });
+
+    client.indices.delete({
+        index: 'pictures'
+    });
+
+})
+
 gulp.task('init', function() {
     var elasticsearch = require('elasticsearch');
     var client = new elasticsearch.Client({
@@ -195,6 +212,14 @@ gulp.task('init', function() {
             }
         }
     }
+
+    client.indices.create({
+        index: 'recipes'
+    });
+
+    client.indices.create({
+        index: 'pictures'
+    });
 
     client.indices.putMapping({
         type: "recipe",
