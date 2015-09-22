@@ -5,6 +5,18 @@ var clean = require('gulp-clean');
 var md5 = require('MD5');
 var fs = require('fs');
 var path = require('path');
+var im = require('imagemagick');
+var async = require("async");
+
+var elasticHost = process.env.elasticHost || 'localhost:9200';
+var imageVolume = process.env.imageVolume || '/experimental/workdir';
+
+
+
+//create imgDest dir if not exist
+if (!fs.existsSync(imageVolume)){
+    fs.mkdirSync(imageVolume);
+}
 
 
 var paths = {
@@ -44,7 +56,8 @@ gulp.task('extractPDF', function() {
 
 
     return gulp.src(paths.pdf)
-        .pipe(exec('convert -density 300 <%= file.path%> <%= file.path%>.jpg'))
+        //.pipe(exec('convert -density 300 <%= file.path%> <%= file.path%>.jpg'))
+        .pipe(exec('convert <%= file.path%> <%= file.path%>.jpg'))
         .pipe(exec.reporter(reportOptions))
         .on('finish', function() {
             gulp.src(paths.pdf)
@@ -90,14 +103,19 @@ gulp.task('restore', function() {
 });
 
 
+
+
+
+
+
 function sendToElastichSearch() {
+    console.log("sendToElastic");
     var elasticsearch = require('elasticsearch');
     var client = new elasticsearch.Client({
-        host: 'localhost:9200'
+        host: elasticHost
     });
 
-    function readImageCb(file, buf) {
-
+    function readImageCb(file, buf, finishCb) {
         //init variables
         var text = file.contents.toString('UTF-8');
         var textfile = file.path;
@@ -105,67 +123,61 @@ function sendToElastichSearch() {
         var checksum = md5(buf);
         var filename = path.basename(picturefile);
 
+        //console.log("debuts vars == "+text+" "+textfile+" "+picturefile+" "+checksum+" "+filename);
+
+
+        //copy to dest file
+        fs.createReadStream(picturefile).pipe(fs.createWriteStream(imageVolume+"/"+checksum+".jpg"));
+
+
 
         client.create({
             index: 'recipes',
             type: 'recipe',
             body: {
                 content: text,
-                checksum: checksum
-
+                checksum: checksum/*,
+                attachment: buf.toString('base64')*/
             }
         }, function(error, response) {
-            console.log(response);
-        })
-
-        client.create({
-            index: 'pictures',
-            type: 'picture',
-            body: {
-                content: buf.toString('base64'),
-                checksum: checksum
-
-            }
-        }, function(error, response) {
+            console.log("end handling "+picturefile);
+            finishCb();
             //console.log(response);
         })
+
+        
     }
+
+    function startHandlingImage(file,cb) {
+        file.contents = new Buffer(String(file.contents));
+        var picturefile = file.path.replace(".txt", "");
+        console.log("start handling "+picturefile);
+
+        fs.readFile(picturefile, function(err, buf) {
+            readImageCb(file, buf,cb);
+        });
+    }
+
+    var queue = async.queue(startHandlingImage, 3); // Run three simultaneous handling
+
 
     // you're going to receive Vinyl files as chunks
     function transform(file, cb) {
         // read and modify file contents
-        file.contents = new Buffer(String(file.contents));
+       
 
-        var picturefile = file.path.replace(".txt", "");
-
-
-        console.log();
+        /*console.log();
         console.log("============");
-        console.log(file.path);
+        console.log(file.path);*/
 
-        fs.readFile(picturefile, function(err, buf) {
-            readImageCb(file, buf);
-            cb(null, file);
+
+
+
+        //startHandlingImage(picturefile);
+        queue.push(file, function() {
+            cb(null, file);    
         });
-
-        /*client.create({
-    	index: 'myindex',
-    	type: 'mytype',
-    	body: {
-    		title: 'Test 1',
-    		tags: ['y', 'z'],
-    		published: true,
-    		published_at: '2013-01-01',
-    		counter: 1,
-    		//content: file.contents
-    	}
-    }, function (error, response) {
-    	console.log(response);
-    });*/
-
         
-
-
     }
     return require('event-stream').map(transform);
 }
@@ -182,7 +194,7 @@ gulp.task('elastic', [], function() {
 gulp.task('drop', function() {
     var elasticsearch = require('elasticsearch');
     var client = new elasticsearch.Client({
-        host: 'localhost:9200',
+        host: elasticHost,
         log: 'trace'
     });
 
@@ -190,16 +202,16 @@ gulp.task('drop', function() {
         index: 'recipes'
     });
 
-    client.indices.delete({
+    /*client.indices.delete({
         index: 'pictures'
-    });
+    });*/
 
 })
 
 gulp.task('init', function() {
     var elasticsearch = require('elasticsearch');
     var client = new elasticsearch.Client({
-        host: 'localhost:9200',
+        host: elasticHost,
         log: 'trace'
     });
 
@@ -208,21 +220,24 @@ gulp.task('init', function() {
             properties: {
                 content: {
                     "type": "string"
-                }
+                }/*,
+                attachment : { "type" : "attachment" }*/
             }
         }
     }
-
-    client.indices.create({
-        index: 'recipes'
-    });
-
-    client.indices.create({
-        index: 'pictures'
-    });
 
     client.indices.putMapping({
         type: "recipe",
         body: body
     });
+
+    client.indices.create({
+        index: 'recipes'
+    });
+
+    /*client.indices.create({
+        index: 'pictures'
+    });*/
+
+    
 });
