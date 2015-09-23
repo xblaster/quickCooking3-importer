@@ -130,20 +130,33 @@ function sendToElastichSearch() {
         fs.createReadStream(picturefile).pipe(fs.createWriteStream(imageVolume+"/"+checksum+".jpg"));
 
 
+        function create() {
+            client.create({
+                index: 'recipes',
+                type: 'recipe',
+                body: {
+                    content: text,
+                    checksum: checksum/*,
+                    attachment: buf.toString('base64')*/
+                }
+            }, function(error, response) {
+                console.log("end handling "+picturefile);
+                finishCb();
+                //console.log(response);
+            })
+        }
 
-        client.create({
-            index: 'recipes',
-            type: 'recipe',
-            body: {
-                content: text,
-                checksum: checksum/*,
-                attachment: buf.toString('base64')*/
-            }
+        client.deleteByQuery({
+              index: 'recipes',
+              body: {
+                   "query" : {
+                       "term" : {  checksum: checksum }
+                    }
+              }
         }, function(error, response) {
-            console.log("end handling "+picturefile);
-            finishCb();
-            //console.log(response);
-        })
+            console.log(response);
+            create(); //create after deleting element with same checksum
+        });
 
         
     }
