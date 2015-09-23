@@ -57,7 +57,7 @@ gulp.task('extractPDF', function() {
 
     return gulp.src(paths.pdf)
         //.pipe(exec('convert -density 300 <%= file.path%> <%= file.path%>.jpg'))
-        .pipe(exec('convert <%= file.path%> <%= file.path%>.jpg'))
+        .pipe(exec('convert -density 300 <%= file.path%> <%= file.path%>.jpg'))
         .pipe(exec.reporter(reportOptions))
         .on('finish', function() {
             gulp.src(paths.pdf)
