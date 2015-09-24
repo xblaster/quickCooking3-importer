@@ -10,7 +10,7 @@ var async = require("async");
 
 var elasticHost = process.env.elasticHost || 'localhost:9200';
 var imageVolume = process.env.imageVolume || '/experimental/workdir';
-
+var importVolume = process.env.importVolume || 'toImport';
 
 
 //create imgDest dir if not exist
@@ -20,9 +20,9 @@ if (!fs.existsSync(imageVolume)){
 
 
 var paths = {
-    pdf: 'workspace/**.pdf',
-    images: 'workspace/**.jpg',
-    texts: 'workspace/**.txt'
+    pdf: 'workspace/**/*.pdf',
+    images: 'workspace/**/*.jpg',
+    texts: 'workspace/**/*.txt'
 };
 
 gulp.task('default', ['handlePDF']);
@@ -32,15 +32,22 @@ gulp.task('watch', function() {
     return gulp.watch(paths.pdf, ['extractPDF']);
 });
 
-gulp.task('handlePDF', ['clean', 'extractImages'], function() {})
+gulp.task('handlePDF', ['extractImages'], function() {})
 
+
+gulp.task('importFromVolume', function() {
+    gulp.src(importVolume+'/**/*.pdf')
+        .pipe(gulp.dest('workspace/'));
+    gulp.src(importVolume+'/**/*.jpg')
+        .pipe(gulp.dest('workspace/'));
+});
 
 gulp.task('clean', function() {
     gulp.src(paths.images).pipe(clean());
     return gulp.src(paths.texts).pipe(clean());
 });
 
-gulp.task('extractPDF', function() {
+gulp.task('extractPDF', ['importFromVolume'],  function() {
     var options = {
         continueOnError: false, // default = false, true means don't emit error event 
         pipeStdout: false // default = false, true means stdout is written to file.contents 
@@ -50,14 +57,14 @@ gulp.task('extractPDF', function() {
     var reportOptions = {
         err: true, // default = true, false means don't write err 
         stderr: true, // default = true, false means don't write stderr 
-        stdout: true // default = true, false means don't write stdout 
+        stdout: false // default = true, false means don't write stdout 
     }
 
 
 
     return gulp.src(paths.pdf)
         //.pipe(exec('convert -density 300 <%= file.path%> <%= file.path%>.jpg'))
-        .pipe(exec('convert -density 300 <%= file.path%> <%= file.path%>.jpg'))
+        .pipe(exec('convert -density 300 "<%= file.path%>" "<%= file.path%>.jpg"'))
         .pipe(exec.reporter(reportOptions))
         .on('finish', function() {
             gulp.src(paths.pdf)
@@ -82,9 +89,10 @@ gulp.task('extractImages', ['extractPDF'], function() {
     }
 
     return gulp.src(paths.images)
-        .pipe(exec('tesseract <%= file.path%> <%= file.path%> -l eng'))
+        .pipe(exec('tesseract "<%= file.path%>" "<%= file.path%>" -l fra'))
         //.pipe(exec.reporter(reportOptions))
         .on('finish', function() {
+
             /*gulp.src(paths.images)
    			.pipe(gulp.dest('build/'))
    	
