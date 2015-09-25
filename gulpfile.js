@@ -14,7 +14,7 @@ var importVolume = process.env.importVolume || 'toImport';
 
 
 //create imgDest dir if not exist
-if (!fs.existsSync(imageVolume)){
+if (!fs.existsSync(imageVolume)) {
     fs.mkdirSync(imageVolume);
 }
 
@@ -36,9 +36,9 @@ gulp.task('handlePDF', ['extractImages'], function() {})
 
 
 gulp.task('importFromVolume', function() {
-    gulp.src(importVolume+'/**/*.jpg')
+    gulp.src(importVolume + '/**/*.jpg')
         .pipe(gulp.dest('workspace/'));
-    return gulp.src(importVolume+'/**/*.pdf')
+    return gulp.src(importVolume + '/**/*.pdf')
         .pipe(gulp.dest('workspace/'));
 });
 
@@ -47,7 +47,7 @@ gulp.task('clean', function() {
     return gulp.src(paths.texts).pipe(clean());
 });
 
-gulp.task('extractPDF', ['importFromVolume'],  function() {
+gulp.task('extractPDF', ['importFromVolume'], function() {
     var options = {
         continueOnError: false, // default = false, true means don't emit error event 
         pipeStdout: false // default = false, true means stdout is written to file.contents 
@@ -137,8 +137,15 @@ function sendToElastichSearch() {
 
 
         //copy to dest file
-        fs.createReadStream(picturefile).pipe(fs.createWriteStream(imageVolume+"/"+checksum+".jpg"));
+        fs.createReadStream(picturefile).pipe(fs.createWriteStream(imageVolume + "/" + checksum + ".jpg"));
 
+        im.resize({
+            srcPath: picturefile,
+            dstPath: imageVolume + "/p/" + checksum + ".jpg",
+            width: 20
+        }, function(err, stdout, stderr) {
+           
+        });
 
         function create() {
             client.create({
@@ -146,38 +153,41 @@ function sendToElastichSearch() {
                 type: 'recipe',
                 body: {
                     content: text,
-                    checksum: checksum/*,
+                    checksum: checksum
+                    /*,
                     attachment: buf.toString('base64')*/
                 }
             }, function(error, response) {
-                console.log("end handling "+picturefile);
+                console.log("end handling " + picturefile);
                 finishCb();
                 //console.log(response);
             })
         }
 
         client.deleteByQuery({
-              index: 'recipes',
-              body: {
-                   "query" : {
-                       "term" : {  checksum: checksum }
+            index: 'recipes',
+            body: {
+                "query": {
+                    "term": {
+                        checksum: checksum
                     }
-              }
+                }
+            }
         }, function(error, response) {
             console.log(response);
             create(); //create after deleting element with same checksum
         });
 
-        
+
     }
 
-    function startHandlingImage(file,cb) {
+    function startHandlingImage(file, cb) {
         file.contents = new Buffer(String(file.contents));
         var picturefile = file.path.replace(".txt", "");
-        console.log("start handling "+picturefile);
+        console.log("start handling " + picturefile);
 
         fs.readFile(picturefile, function(err, buf) {
-            readImageCb(file, buf,cb);
+            readImageCb(file, buf, cb);
         });
     }
 
@@ -187,7 +197,7 @@ function sendToElastichSearch() {
     // you're going to receive Vinyl files as chunks
     function transform(file, cb) {
         // read and modify file contents
-       
+
 
         /*console.log();
         console.log("============");
@@ -198,9 +208,9 @@ function sendToElastichSearch() {
 
         //startHandlingImage(picturefile);
         queue.push(file, function() {
-            cb(null, file);    
+            cb(null, file);
         });
-        
+
     }
     return require('event-stream').map(transform);
 }
@@ -221,7 +231,7 @@ gulp.task('drop', function() {
         log: 'trace'
     });
 
-     client.indices.delete({
+    client.indices.delete({
         index: 'recipes'
     });
 
@@ -243,7 +253,8 @@ gulp.task('init', function() {
             properties: {
                 content: {
                     "type": "string"
-                }/*,
+                }
+                /*,
                 attachment : { "type" : "attachment" }*/
             }
         }
@@ -262,5 +273,5 @@ gulp.task('init', function() {
         index: 'pictures'
     });*/
 
-    
+
 });
