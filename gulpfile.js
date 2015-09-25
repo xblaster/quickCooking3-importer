@@ -36,9 +36,9 @@ gulp.task('handlePDF', ['extractImages'], function() {})
 
 
 gulp.task('importFromVolume', function() {
-    gulp.src(importVolume+'/**/*.pdf')
-        .pipe(gulp.dest('workspace/'));
     gulp.src(importVolume+'/**/*.jpg')
+        .pipe(gulp.dest('workspace/'));
+    return gulp.src(importVolume+'/**/*.pdf')
         .pipe(gulp.dest('workspace/'));
 });
 
@@ -64,7 +64,9 @@ gulp.task('extractPDF', ['importFromVolume'],  function() {
 
     return gulp.src(paths.pdf)
         //.pipe(exec('convert -density 300 <%= file.path%> <%= file.path%>.jpg'))
-        .pipe(exec('convert -density 300 "<%= file.path%>" "<%= file.path%>.jpg"'))
+        //.pipe(exec('convert -density 300 "<%= file.path%>" "<%= file.path%>.jpg"'))
+        //-dNOPAUSE -dBATCH -sDEVICE=pdfwrite
+        .pipe(exec('gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -dNumRenderingThreads=2 -r144 -sOutputFile="<%= file.path%>-p%03d.jpg" "<%= file.path%>"'))
         .pipe(exec.reporter(reportOptions))
         .on('finish', function() {
             gulp.src(paths.pdf)
