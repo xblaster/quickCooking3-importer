@@ -8,7 +8,7 @@ var path = require('path');
 var im = require('imagemagick');
 var async = require("async");
 
-var elasticHost = process.env.elasticHost || 'localhost:9200';
+var elasticHost = process.env.elasticHost || 'net.lo2k.net:9200';
 var imageVolume = process.env.imageVolume || '/experimental/workdir';
 var importVolume = process.env.importVolume || 'toImport';
 
@@ -252,10 +252,9 @@ gulp.task('init', function() {
         recipe: {
             properties: {
                 content: {
-                    "type": "string"
+                    "type": "string",
+                    "analyzer": "french"
                 }
-                /*,
-                attachment : { "type" : "attachment" }*/
             }
         }
     }
