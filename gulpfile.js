@@ -1,4 +1,5 @@
 var gulp = require('gulp');
+var gulpSequence = require('gulp-sequence');
 var gutil = require('gulp-util');
 var exec = require('gulp-exec');
 var clean = require('gulp-clean');
@@ -13,6 +14,8 @@ var imageVolume = process.env.imageVolume || '/experimental/workdir';
 var importVolume = process.env.importVolume || 'toImport';
 
 
+
+
 //create imgDest dir if not exist
 if (!fs.existsSync(imageVolume)) {
     fs.mkdirSync(imageVolume);
@@ -25,7 +28,7 @@ var paths = {
     texts: 'workspace/**/*.txt'
 };
 
-gulp.task('default', ['handlePDF']);
+gulp.task('default', gulpSequence('importFromVolume', 'handlePDF', 'elasticsearch'))
 
 gulp.task('watch', function() {
 
@@ -36,18 +39,17 @@ gulp.task('handlePDF', ['extractImages'], function() {})
 
 
 gulp.task('importFromVolume', function() {
-    gulp.src(importVolume + '/**/*.jpg')
+    gulp.src(importVolume + '/**/*')
         .pipe(gulp.dest('workspace/'));
-    return gulp.src(importVolume + '/**/*.pdf')
-        .pipe(gulp.dest('workspace/'));
+        
 });
 
 gulp.task('clean', function() {
     gulp.src(paths.images).pipe(clean());
-    return gulp.src(paths.texts).pipe(clean());
+    gulp.src(paths.texts).pipe(clean());
 });
 
-gulp.task('extractPDF', ['importFromVolume'], function() {
+gulp.task('extractPDF', function() {
     var options = {
         continueOnError: false, // default = false, true means don't emit error event 
         pipeStdout: false // default = false, true means stdout is written to file.contents 
