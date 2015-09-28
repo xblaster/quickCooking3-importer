@@ -28,7 +28,7 @@ var paths = {
     texts: 'workspace/**/*.txt'
 };
 
-gulp.task('default', gulpSequence('importFromVolume', 'handlePDF', 'elasticsearch'))
+gulp.task('default', gulpSequence('importFromVolume', 'importFromVolume' 'handlePDF', 'elastic'))
 
 gulp.task('watch', function() {
 
