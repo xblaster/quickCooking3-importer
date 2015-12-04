@@ -16,7 +16,7 @@ fs.readFile('client_secret.json', function processClientSecrets(err, content) {
   }
   // Authorize a client with the loaded credentials, then call the
   // Gmail API.
-  authorize(JSON.parse(content), listLabels);
+  authorize(JSON.parse(content), listEmail);
 });
 
 /**
@@ -119,4 +119,15 @@ function listLabels(auth) {
       }
     }
   });
+}
+
+function listEmail(auth) {
+  var gmail = google.gmail('v1');
+  gmail.users.messages.list({
+	auth: auth,
+	userId: 'me',
+ }  , function(err, response) {
+	console.log(response);
+   });
+  
 }
