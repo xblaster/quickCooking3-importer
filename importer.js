@@ -40,6 +40,17 @@ var client = new elasticsearch.Client({
 /*************************************
  *  image part
  */
+
+
+
+var resizeQueue = async.queue(function (params, callback) {
+	
+	console.log("resizing "+params.srcPath+" to => "+params.width);
+	im.resize(params, function(err, stdout, stderr) {
+          callback();
+    });	
+}, 3);
+
 function readImageCb(file, buf, finishCb) {
     //init variables
     var text = buf.toString('UTF-8');
@@ -69,13 +80,18 @@ function readImageCb(file, buf, finishCb) {
 	}
 
 	for (var qualityRef in qualities) {
-		im.resize({
+		try {
+			fs.mkdirSync(imageVolume + "/"+qualityRef+"/" );
+		}
+		catch (exc) {
+			//well, it doesn't matter !
+		}
+		
+		resizeQueue.push({
             srcPath: picturefile,
             dstPath: imageVolume + "/"+qualityRef+"/" + checksum + ".jpg",
             width: qualities[qualityRef].width
-        }, function(err, stdout, stderr) {
-           
-        });	
+        });
 	}
 
    
