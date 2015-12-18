@@ -1,6 +1,6 @@
+/*eslint-env node */
 var gulp = require('gulp');
 var gulpSequence = require('gulp-sequence');
-var gutil = require('gulp-util');
 var exec = require('gulp-exec');
 var clean = require('gulp-clean');
 var md5 = require('MD5');
@@ -13,7 +13,17 @@ var elasticHost = process.env.elasticHost || 'net.lo2k.net:9200';
 var imageVolume = process.env.imageVolume || '/experimental/workdir';
 var importVolume = process.env.importVolume || 'toImport';
 
+function guid() {
+  function s4() {
+    return Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
+  }
+  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+    s4() + '-' + s4() + s4() + s4();
+}
 
+var importIdentifier = guid();
 
 
 //create imgDest dir if not exist
@@ -90,7 +100,7 @@ gulp.task('extractImages', ['extractPDF'], function() {
         err: true, // default = true, false means don't write err 
         stderr: true, // default = true, false means don't write stderr 
         stdout: true // default = true, false means don't write stdout 
-    }
+    };
 
     return gulp.src(paths.images)
         .pipe(exec('tesseract "<%= file.path%>" "<%= file.path%>" -l fra'))
@@ -104,6 +114,13 @@ gulp.task('extractImages', ['extractPDF'], function() {
 		   	.pipe(clean());*/
         });
 });
+
+gulp.task('generateThumb', function(cb) {
+	
+	gulp.src(imageVolume+"/*.jpg") //#TODO from here 
+	
+})
+
 
 //for debug purpose
 gulp.task('restore', function() {
@@ -141,13 +158,32 @@ function sendToElastichSearch() {
         //copy to dest file
         fs.createReadStream(picturefile).pipe(fs.createWriteStream(imageVolume + "/" + checksum + ".jpg"));
 
-        im.resize({
-            srcPath: picturefile,
-            dstPath: imageVolume + "/p/" + checksum + ".jpg",
-            width: 20
-        }, function(err, stdout, stderr) {
-           
-        });
+		var qualities = {
+		    p: {
+		        width: 20
+		    },
+		    t: {
+		        width: 40
+		    },
+		    m: {
+		        width: 200
+		    },
+		    l: {
+		        width: 800
+		    }
+		}
+
+		for (var qualityRef in qualities) {
+			im.resize({
+	            srcPath: picturefile,
+	            dstPath: imageVolume + "/"+qualityRef+"/" + checksum + ".jpg",
+	            width: qualities[qualityRef].width
+	        }, function(err, stdout, stderr) {
+	           
+	        });	
+		}
+
+       
 
         function create() {
             client.create({
@@ -155,15 +191,15 @@ function sendToElastichSearch() {
                 type: 'recipe',
                 body: {
                     content: text,
-                    checksum: checksum
-                    /*,
-                    attachment: buf.toString('base64')*/
+                    checksum: checksum, 
+                    filename:  picturefile,
+                    importId: importIdentifier
                 }
             }, function(error, response) {
                 console.log("end handling " + picturefile);
                 finishCb();
                 //console.log(response);
-            })
+            });
         }
 
         client.deleteByQuery({
@@ -198,17 +234,7 @@ function sendToElastichSearch() {
 
     // you're going to receive Vinyl files as chunks
     function transform(file, cb) {
-        // read and modify file contents
 
-
-        /*console.log();
-        console.log("============");
-        console.log(file.path);*/
-
-
-
-
-        //startHandlingImage(picturefile);
         queue.push(file, function() {
             cb(null, file);
         });
@@ -218,9 +244,6 @@ function sendToElastichSearch() {
 }
 
 gulp.task('elastic', [], function() {
-
-
-
     gulp.src(paths.texts)
         .pipe(sendToElastichSearch());
 
@@ -241,7 +264,7 @@ gulp.task('drop', function() {
         index: 'pictures'
     });*/
 
-})
+});
 
 gulp.task('init', function() {
     var elasticsearch = require('elasticsearch');
@@ -259,7 +282,7 @@ gulp.task('init', function() {
                 }
             }
         }
-    }
+    };
 
     client.indices.putMapping({
         type: "recipe",
