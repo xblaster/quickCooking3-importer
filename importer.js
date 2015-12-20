@@ -147,7 +147,7 @@ function startHandlingText(file, cb) {
     var picturefile = file.replace(".txt", "");
     console.log("start handling " + picturefile);
 
-    fs.readFile(picturefile, function(err, buf) {
+    fs.readFile(file, function(err, buf) {
         readImageCb(file, buf, cb);
     });
 }
