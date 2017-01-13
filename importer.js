@@ -114,7 +114,7 @@ function readImageCb(file, buf, finishCb) {
        console.log(matched);
        console.log("===end - create===");*/
        if (matched != null) {
-       		body.page = matched[2];
+       		body.page = parseInt(matched[2],10);
        		body.bookName = matched[1];
        		body.book = true;
        }
