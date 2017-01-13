@@ -97,15 +97,32 @@ function readImageCb(file, buf, finishCb) {
    
 
     function create() {
-        client.create({
-            index: 'recipes',
-            type: 'recipe',
-            body: {
+
+    	var regex = /\/(.*)-p(.*)\.jpg/;
+
+		var body = {
                 content: text,
                 checksum: checksum, 
                 filename:  picturefile,
                 importId: importIdentifier
-            }
+       };
+
+       var matched = picturefile.match(regex);
+
+		/*console.log("===create===");
+	   console.log(picturefile);
+       console.log(matched);
+       console.log("===end - create===");*/
+       if (matched != null) {
+       		body.page = matched[2];
+       		body.bookName = matched[1];
+       		body.book = true;
+       }
+
+        client.create({
+            index: 'recipes',
+            type: 'recipe',
+           	body: body
         }, function(error, response) {
             console.log("end handling " + picturefile);
             finishCb();
